@@ -26,6 +26,7 @@ import baritone.api.command.datatypes.ItemById;
 import baritone.api.command.exception.CommandException;
 import baritone.api.utils.BlockOptionalMeta;
 import baritone.cache.WorldScanner;
+import net.minecraft.item.Item;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,17 +48,21 @@ public class CraftCommand extends Command {
 
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
-        int quantity = args.getAsOrDefault(Integer.class, 0);
+        args.requireMax(2);
         args.requireMin(1);
-        List<BlockOptionalMeta> boms = new ArrayList<>();
-        while (args.hasAny()) {
-            boms.add(args.getDatatypeFor());
-        }
+        Item toCraft = null;
+        int quantity = 1;
+        if(args.has(1)){
+            quantity = 1;
+            toCraft = args.getDatatypeFor(ItemById.INSTANCE);
 
-                args.
+        }else if (args.has(2)){
+            quantity = args.getAs(Integer.class);
+            toCraft = args.getDatatypeFor(ItemById.INSTANCE);
+        }
         WorldScanner.INSTANCE.repack(ctx);
-        logDirect(String.format("Mining %s", boms.toString()));
-        baritone.getMineProcess().mine(quantity, boms.toArray(new BlockOptionalMeta[0]));
+        logDirect(String.format("Crafting %s", toCraft.toString()));
+        baritone.getCraftProcess().craft(toCraft,quantity);
     }
 
     @Override

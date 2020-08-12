@@ -21,6 +21,7 @@ import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.Settings;
 import baritone.api.event.listener.IEventBus;
+import baritone.api.process.ICraftProcess;
 import baritone.api.utils.Helper;
 import baritone.api.utils.IPlayerContext;
 import baritone.behavior.*;
@@ -77,6 +78,7 @@ public class Baritone implements IBaritone {
     private ExploreProcess exploreProcess;
     private BackfillProcess backfillProcess;
     private FarmProcess farmProcess;
+    private CraftProcess craftProcess;
 
     private PathingControlManager pathingControlManager;
     private SelectionManager selectionManager;
@@ -112,6 +114,7 @@ public class Baritone implements IBaritone {
             exploreProcess = new ExploreProcess(this);
             backfillProcess = new BackfillProcess(this);
             farmProcess = new FarmProcess(this);
+            craftProcess = new CraftProcess(this);
         }
 
         this.worldProvider = new WorldProvider();
@@ -182,6 +185,11 @@ public class Baritone implements IBaritone {
     @Override
     public MineProcess getMineProcess() {
         return this.mineProcess;
+    }
+
+    @Override
+    public CraftProcess getCraftProcess() {
+        return this.craftProcess;
     }
 
     public FarmProcess getFarmProcess() {
