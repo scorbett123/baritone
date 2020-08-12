@@ -38,6 +38,8 @@ public final class DefaultCommands {
                 new GotoCommand(baritone),
                 new PathCommand(baritone),
                 new ProcCommand(baritone),
+                new FullBrightCommand(baritone),
+                new CraftCommand(baritone),
                 new VersionCommand(baritone),
                 new RepackCommand(baritone),
                 new BuildCommand(baritone),
