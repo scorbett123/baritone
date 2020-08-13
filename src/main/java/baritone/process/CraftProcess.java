@@ -32,11 +32,15 @@ import baritone.utils.BaritoneProcessHelper;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiCrafting;
 import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.ClickType;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.*;
+import net.minecraft.item.crafting.CraftingManager;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
 
@@ -64,12 +68,14 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         this.item = item;
         this.needed = amount;
         this.currentAmount = 0;
-      posibilities = getPossibility();
-      HELPER.logDirect(posibilities.toArray().length+"");
+        posibilities = getPossibility();
+        HELPER.logDirect(posibilities.toArray().length + "");
         // posibilities.forEach(recipe -> recipe.getIngredients().forEach(ingredient -> Arrays.stream(ingredient.getMatchingStacks()).forEach(a ->HELPER.logDirect(a.getDisplayName()))));
-      craftingTablePosition=null;
+        craftingTablePosition = null;
         recipe = decideBest(posibilities);
         clicks = null;
+        recipe.generateItems();
+        HELPER.logDirect(recipe.toString());
     }
 
     public List<IRecipe> getPossibility() {
@@ -100,8 +106,10 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
             if (clicks.size() > 0) {
                 HELPER.logDirect(clicks.size() + "   " + clicks.peekFirst().slotNumber);
+
                 clicks.remove().click();
             } else {
+                removeResult();
                 active = false;
             }
         }
@@ -157,6 +165,26 @@ active=false;
     @Override
     public String displayName0() {
         return null;
+    }
+
+    public void removeResult() {
+        new LeftClickAction(10).click();
+        new LeftClickAction(findEmptySlot()).click();
+    }
+
+    public int findEmptySlot() {
+        NonNullList<ItemStack> mainInventory = mc.player.inventory.mainInventory;
+        for (int i = 0; i < mainInventory.size(); i++) {
+
+
+            if (
+                    mainInventory.get(i).getItem() == Items.AIR) {
+                return i;
+            }
+
+
+        }
+        return -1;
     }
 
     public int searchInventory(Item item) {
@@ -336,14 +364,18 @@ active=false;
         public String toString() {
             generateItems();
             StringBuilder builder = new StringBuilder();
-            for (int x = 0; x < 3; x++) {
-                for (int y = 0; y < 3; y++) {
+            for (int y = 0; y < items.length; y++) {
+                StringBuilder builder1 = new StringBuilder();
+                for (int x = 0; x < items[y].length; x++) {
                     if (items[x][y] != null) {
-                        builder.append(items[x][y].getItemStackDisplayName(items[x][y].getDefaultInstance())).append(" item ");
+                        builder1.append(items[x][y].getItemStackDisplayName(items[x][y].getDefaultInstance())).append(" item ");
                     } else {
-                        builder.append("  null  item  ");
+                        builder1.append("  null  item  ");
+
                     }
                 }
+                HELPER.logDirect(builder1.toString());
+                builder.append(builder1);
             }
 
 
@@ -358,8 +390,8 @@ active=false;
                 for (y = 0; y < items[x].length; y++) {
 
                     Ingredient ingredient = ingredients[x][y];
-                    HELPER.logDirect(
-                            ingredient.toString());
+
+
                     if (ingredient == null) {
                         continue;
                     }
@@ -395,31 +427,32 @@ active=false;
 
         public void craft() {
             clicks = new LinkedList<>();
+            final GuiContainer screen = (GuiContainer) mc.currentScreen;
 
             for (int y = 0; y < items.length; y++) {
                 for (int x = 0; x < items[y].length; x++) {
-                    final GuiContainer screen = (GuiContainer) mc.currentScreen;
-                    HELPER.logDirect(y + "   :   " + x);
+
+
                     int slotid = searchInventory(items[x][y]);
                     Slot from = null;
                     if (slotid != -1) {
                         from = screen.inventorySlots.getSlot(slotid);
                     }
-                    Slot to = screen.inventorySlots.getSlot(x + y * 3);
+                    Slot to = screen.inventorySlots.getSlot((x + y * 3) + 1);
 
                     int amount = 1;
 
 
                     if (from == null) {
                         HELPER.logDirect("from is null");
-                        return;
+                        continue;
 
                     }
 
                     int limit = Math.min(to.getSlotStackLimit(), from.getStack().getMaxStackSize());
                     int missing = Math.min(amount, limit - getSlotContentCount(to));
 
-
+                    HELPER.logDirect(x + "  :   " + y);
                     if (getSlotContentCount(from) <= missing && getSlotContentCount(from) > 0) {
                         missing -= moveAll(from, to);
                     } else if (getSlotContentCount(from) - getSlotContentCount(from) / 2 <= missing
@@ -432,6 +465,7 @@ active=false;
                 }
 
             }
+            clicks.stream().forEach(click -> HELPER.logDirect(click.toString()));
         }
     }
 }
