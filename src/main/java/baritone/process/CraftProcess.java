@@ -18,26 +18,25 @@
 package baritone.process;
 
 import baritone.Baritone;
+import baritone.api.pathing.goals.GoalGetToBlock;
 import baritone.api.process.ICraftProcess;
 import baritone.api.process.PathingCommand;
+import baritone.api.process.PathingCommandType;
+import baritone.api.utils.BlockOptionalMetaLookup;
 import baritone.api.utils.Helper;
-import baritone.cache.WorldData;
 import baritone.pathing.movement.CalculationContext;
+import baritone.pathing.movement.MovementHelper;
 import baritone.utils.BaritoneProcessHelper;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.client.gui.inventory.GuiCrafting;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.*;
-import net.minecraft.stats.RecipeBook;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -45,7 +44,9 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     boolean active = false;
     Item item;
     int needed = -1, currentAmount = 0;
-    List<CraftingPossibility> posibilities;
+    List<IRecipe> posibilities;
+    BlockPos craftingTablePosition = null;
+    CraftingRecipe recipe = null;
     public CraftProcess(Baritone baritone) {
         super(baritone);
     }
@@ -57,17 +58,23 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
        this.needed=amount;
        this.currentAmount=0;
       posibilities = getPossibility();
+      HELPER.logDirect(posibilities.toArray().length+"");
+      posibilities.forEach(recipe ->recipe.getIngredients().stream().forEach(ingredient -> Arrays.stream(ingredient.getMatchingStacks()).forEach(a ->HELPER.logDirect(a.getDisplayName()))));
+      craftingTablePosition=null;
+recipe=decideBest(posibilities);
+HELPER.logDirect(recipe.toString());
     }
 
-    public List<CraftingPossibility> getPossibility() {
+    public List<IRecipe> getPossibility() {
         try {
             return CraftingManager.REGISTRY.getKeys().stream()
                     .map(id -> CraftingManager.REGISTRY.getObject(id))
                     .filter(recipe -> {
                         ItemStack out = recipe.getRecipeOutput();
-                        return out != null && out.equals(item);
+
+
+                        return out != null && out.getItem().equals(item);
                     })
-                    .map(CraftingPossibility::new)
                     .collect(Collectors.toList());
         } catch (IllegalArgumentException e) {
             System.err.println("Cannot craft: " + e.getMessage());
@@ -77,24 +84,38 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
     @Override
     public boolean isActive() {
-        return false;
+        return active;
     }
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
-        MineProcess.searchWorld(baritone.ca);
+        if(active) {
+            if (craftingTablePosition == null) {
+                List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
+                craftingTablePosition = positions.get(0);
+                return new PathingCommand(new GoalGetToBlock(craftingTablePosition),PathingCommandType.SET_GOAL_AND_PATH);
+            }
+if(craftingTablePosition.distanceSq(mc.player.getPosition())==2){
+
+
+
+
+
+}
 
 
 
 
 
 
-        return null;
+            return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
+        }else{
+        return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);}
     }
 
     @Override
     public void onLostControl() {
-
+active=false;
     }
 
     @Override
@@ -103,16 +124,34 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     }
 
 
-    public static final class CraftingPossibility {
-        public static final int SUBTYPE_IGNORED = 32767;
+public class CraftingRecipe{
+    @Override
+    public String toString() {
+generateItems();
+        StringBuilder builder = new StringBuilder();
+        for (int x = 0; x <3 ; x++) {
+            for (int y = 0; y < 3; y++) {
+                if(items[x][y]!=null){
+                builder.append(items[x][y].getItemStackDisplayName(items[x][y].getDefaultInstance())).append(" item ");}
+                else{
+                    builder.append("  null  item  ");
+                }
+            }
+        }
 
-        private final Item[][][]slots = new Item[3][3][];
 
-        public CraftingPossibility(IRecipe recipe) {
+        return builder.toString();
+    }
 
+    public Ingredient[][] ingredients= new Ingredient[3][3];
+        public Item[][] items = new Item[3][3];
+        public CraftingRecipe(IRecipe recipe){
+
+
+            HELPER.logDirect("finding possibility");
             if (recipe instanceof ShapedRecipes) {
                 ShapedRecipes shapedRecipes = (ShapedRecipes) recipe;
-
+                HELPER.logDirect("recipe is shaped");
                 int width = shapedRecipes.getWidth();
                 int height = shapedRecipes.getHeight();
 
@@ -120,9 +159,8 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
                         Ingredient itemStack = shapedRecipes.getIngredients().get(x + y * width);
-                        Item[] items =  this.slots[x][y];
-                        Arrays.stream(itemStack.getMatchingStacks()).forEach(item -> items[items.length] = item.getItem());
-                        this.slots[x][y] = items;
+
+                        ingredients[x][y]= itemStack;
                     }
                 }
 
@@ -131,5 +169,76 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                 throw new IllegalArgumentException("Cannot (yet) craft " + recipe);
             }
+
         }
-}}
+
+int loop = 0;
+        int x,y;
+        List<ItemStack>preferableItems = new ArrayList<>();
+    ItemStack[] ingredientA = null;
+    public void generateItems(){
+            for ( x = 0; x < items.length; x++) {
+                for ( y = 0; y < items[x].length; y++) {
+
+                    Ingredient ingredient= ingredients[x][y];
+HELPER.logDirect("generating items");
+if(ingredient==null){
+    continue;
+}
+                    Stream<ItemStack> ingredients =
+                            Arrays.stream(ingredient.getMatchingStacks()).filter(
+                                    itemStack -> searchInventory(itemStack.getItem()) != -1);
+                    List<ItemStack> items2 = ingredients.collect(Collectors.toList());
+                    ingredientA = new ItemStack[items2.toArray().length];
+                    for (int i = 0; i < ingredientA.length; i++) {
+
+
+                      ingredientA[i] = items2.get(i);
+                    }
+                    for (ItemStack itemStack : ingredientA) {
+                        if(items[x][y]!=null){
+                            break;
+                        }
+                      preferableItems.forEach(itemStack1 -> {
+                          if(itemStack.getItem()==itemStack1.getItem()){
+                              items[x][y]=itemStack.getItem();
+                          }
+                      });
+
+                    }
+                    if(items[x][y]==null){
+                        if(ingredientA.length>0)
+items[x][y] = ingredientA[0].getItem();
+                    }
+                }
+
+            }
+        }
+
+
+}
+    public CraftingRecipe decideBest(List<IRecipe> recipes){
+
+        Stream<CraftingRecipe> recipesC = recipes.stream().map(CraftingRecipe::new);
+       Optional<CraftingRecipe> recipe2 = recipesC.findAny();
+        return recipe2.orElse(null);
+    }
+
+
+    public int searchInventory(Item item){
+        NonNullList<ItemStack> inventory = mc.player.inventory.mainInventory;
+        AtomicBoolean found = new AtomicBoolean(false);
+        AtomicInteger ints = new AtomicInteger(-1);
+        AtomicInteger counter = new AtomicInteger(0);
+
+        inventory.forEach(itemStack -> {
+            if(ints.get()==-1){
+            if(itemStack.getItem()==item){
+                found.set(true);
+                ints.set(counter.get());
+                counter.set(counter.get()+1);}
+            }
+        });
+        return ints.get();
+    }
+}
