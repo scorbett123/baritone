@@ -102,6 +102,10 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+
+
+
+
         if (clicks != null) {
 
             if (clicks.size() > 0) {
@@ -109,8 +113,11 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                 clicks.remove().click();
             } else {
+                HELPER.logDirect(currentAmount  + "   "+ needed);
+for(int i =0; i<needed; i++)
                 removeResult();
                 active = false;
+
             }
         }
         if (active) {
@@ -140,8 +147,11 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                     } else {
                         if (recipe != null) {
                             recipe.generateItems();
-                            recipe.craft();
-                            recipe = null;
+                            clicks = new LinkedList<>();
+                            for(currentAmount = currentAmount; currentAmount<needed ;currentAmount++){
+                                recipe.craft();
+                            }
+                            recipe=null;
                         }
                     }
 
@@ -168,18 +178,30 @@ active=false;
     }
 
     public void removeResult() {
-        new LeftClickAction(10).click();
-        new LeftClickAction(findEmptySlot()).click();
+        new LeftClickAction(0).click();
+        HELPER.logDirect(findSlotFor(this.item)+"");
+        new LeftClickAction(findSlotFor(this.item)).click();
     }
 
-    public int findEmptySlot() {
+    public int findSlotFor(Item item) {
         NonNullList<ItemStack> mainInventory = mc.player.inventory.mainInventory;
         for (int i = 0; i < mainInventory.size(); i++) {
 
 
             if (
+                    mainInventory.get(i).getItem() == item) {
+                return convertPlayerInventorySlot(i)+10;
+            }
+
+
+        }
+
+        for (int i = 0; i < mainInventory.size(); i++) {
+
+
+            if (
                     mainInventory.get(i).getItem() == Items.AIR) {
-                return i;
+                return convertPlayerInventorySlot(i)+10;
             }
 
 
@@ -215,7 +237,7 @@ active=false;
 
     private int moveAll(Slot from, Slot to) {
         int oldCount = getSlotContentCount(to);
-        HELPER.logDirect("move all");
+
         addClick(new LeftClickAction(from.slotNumber));
         addClick(new LeftClickAction(to.slotNumber));
 
@@ -224,7 +246,7 @@ active=false;
 
     private int moveHalf(Slot from, Slot to) {
         int oldCount = getSlotContentCount(to);
-        HELPER.logDirect("move half");
+
         addClick(new RightClickAction(from.slotNumber));
         addClick(new LeftClickAction(to.slotNumber));
 
@@ -233,7 +255,7 @@ active=false;
 
     private int moveStackPart(Slot from, Slot to, int count) {
         int oldCount = getSlotContentCount(to);
-        HELPER.logDirect("move part");
+
         addClick(new LeftClickAction(from.slotNumber));
         for (int i = 0; i < count; i++) {
             addClick(new RightClickAction(to.slotNumber));
@@ -426,7 +448,7 @@ active=false;
         }
 
         public void craft() {
-            clicks = new LinkedList<>();
+
             final GuiContainer screen = (GuiContainer) mc.currentScreen;
 
             for (int y = 0; y < items.length; y++) {
@@ -465,7 +487,7 @@ active=false;
                 }
 
             }
-            clicks.stream().forEach(click -> HELPER.logDirect(click.toString()));
+           // clicks.stream().forEach(click -> HELPER.logDirect(click.toString()));
         }
     }
 }
