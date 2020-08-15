@@ -21,14 +21,11 @@ import baritone.api.IBaritone;
 import baritone.api.command.Command;
 import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.datatypes.BlockById;
-import baritone.api.command.datatypes.ForBlockOptionalMeta;
 import baritone.api.command.datatypes.ItemById;
 import baritone.api.command.exception.CommandException;
-import baritone.api.utils.BlockOptionalMeta;
 import baritone.cache.WorldScanner;
 import net.minecraft.item.Item;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -39,8 +36,7 @@ public class CraftCommand extends Command {
     /**
      * Creates a new Baritone control command.
      *
-     * @param baritone
-
+     * @param baritone it is just needed to say what baritone to use.
      */
     protected CraftCommand(IBaritone baritone) {
         super(baritone, "craft");
@@ -54,7 +50,7 @@ public class CraftCommand extends Command {
         int quantity = 1;
        HELPER.logDirect( args.getArgs().toArray().length+"");
         if(args.getArgs().toArray().length==1){
-            quantity = 1;
+
             toCraft = args.getDatatypeFor(ItemById.INSTANCE);
 HELPER.logDirect("args has one");
         }else if (args.getArgs().toArray().length==2){
