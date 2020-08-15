@@ -56,6 +56,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     BlockPos craftingTablePosition = null;
     CraftingRecipe recipe = null;
     int DELAY = 0;
+    NonNullList<ItemStack> inventory = null;
     private LinkedList<AbstractClickAction> clicks = null;
 
     public CraftProcess(Baritone baritone) {
@@ -64,16 +65,21 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
     @Override
     public void craft(Item item, int amount) {
+        if (item == null) {
+            return;
+        }
         active = true;
         this.item = item;
         this.needed = amount;
         this.currentAmount = 0;
+        inventory = mc.player.inventory.mainInventory;
         posibilities = getPossibility();
         HELPER.logDirect(posibilities.toArray().length + "");
         // posibilities.forEach(recipe -> recipe.getIngredients().forEach(ingredient -> Arrays.stream(ingredient.getMatchingStacks()).forEach(a ->HELPER.logDirect(a.getDisplayName()))));
         craftingTablePosition = null;
         recipe = decideBest(posibilities);
         clicks = null;
+
         recipe.generateItems();
         HELPER.logDirect(recipe.toString());
     }
@@ -159,6 +165,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                         if (recipe != null) {
                             recipe.generateItems();
                             clicks = new LinkedList<>();
+
                             for(currentAmount = currentAmount; currentAmount<needed ;currentAmount++){
                                 recipe.craft();
                             }
@@ -195,13 +202,13 @@ active=false;
     }
 
     public int findSlotFor(Item item) {
-        NonNullList<ItemStack> mainInventory = mc.player.inventory.mainInventory;
+        NonNullList<ItemStack> mainInventory = inventory;
         for (int i = 0; i < mainInventory.size(); i++) {
 
 
             if (
                     mainInventory.get(i).getItem() == item) {
-                return convertPlayerInventorySlot(i)+10;
+                return convertToPlayerInventorySlot(i) + 10;
             }
 
 
@@ -212,7 +219,7 @@ active=false;
 
             if (
                     mainInventory.get(i).getItem() == Items.AIR) {
-                return convertPlayerInventorySlot(i)+10;
+                return convertToPlayerInventorySlot(i) + 10;
             }
 
 
@@ -221,7 +228,7 @@ active=false;
     }
 
     public int searchInventory(Item item) {
-        NonNullList<ItemStack> mainInventory = mc.player.inventory.mainInventory;
+        NonNullList<ItemStack> mainInventory = inventory;
         int inventorySlot = -1;
         for (int i = 0; i < mainInventory.size(); i++) {
 
@@ -236,7 +243,7 @@ active=false;
             return -1;
         }
 
-        return 10 + convertPlayerInventorySlot(inventorySlot);
+        return 10 + convertToPlayerInventorySlot(inventorySlot);
     }
 
     public CraftingRecipe decideBest(List<IRecipe> recipes) {
@@ -286,12 +293,21 @@ active=false;
         return slot.getHasStack() ? slot.getStack().getCount() : 0;
     }
 
-    int convertPlayerInventorySlot(int inventorySlot) {
-        // Offset: 10 blocks.
+    int convertToPlayerInventorySlot(int inventorySlot) {
+        // Offset: 10 blocks. 8
         if (inventorySlot < 9) {
-            return inventorySlot + 9 * 3;
+            return inventorySlot + 9 * 3; // 35
         } else {
             return inventorySlot - 9;
+        }
+    }
+
+    int convertFromPlayerInventorySlot(int inventorySlot) {
+        // Offset: 10 blocks.
+        if (inventorySlot > 27) {
+            return inventorySlot - 9 * 3;
+        } else {
+            return inventorySlot + 9;
         }
     }
 
@@ -483,18 +499,25 @@ active=false;
                     }
 
                     int limit = Math.min(to.getSlotStackLimit(), from.getStack().getMaxStackSize());
-                    int missing = Math.min(amount, limit - getSlotContentCount(to));
+                    int toMove = Math.min(amount, limit - getSlotContentCount(to));
+                    int amountMoved = 0;
 
                     HELPER.logDirect(x + "  :   " + y);
-                    if (getSlotContentCount(from) <= missing && getSlotContentCount(from) > 0) {
-                        missing -= moveAll(from, to);
-                    } else if (getSlotContentCount(from) - getSlotContentCount(from) / 2 <= missing
+                    if (getSlotContentCount(from) <= toMove && getSlotContentCount(from) > 0) {
+                        amountMoved += moveAll(from, to);
+                    } else if (getSlotContentCount(from) - getSlotContentCount(from) / 2 <= toMove
                             && getSlotContentCount(from) > 0) {
-                        missing -= moveHalf(from, to);
-                    } else if (missing > 0 && getSlotContentCount(from) > 0) {
-                        missing -= moveStackPart(from, to, missing);
+                        amountMoved += moveHalf(from, to);
+                    } else if (toMove > 0 && getSlotContentCount(from) > 0) {
+                        amountMoved += moveStackPart(from, to, toMove);
                     }
+                    int inventorySlot = convertFromPlayerInventorySlot(from.slotNumber) - 10;
+                    ItemStack stack = inventory.get(inventorySlot);
 
+
+                    stack.setCount(inventory.get(inventorySlot).getCount() - 1);
+                    HELPER.logDirect("Setting count to" + stack.getCount() + " of " + stack.getDisplayName() + " in slot " + inventorySlot);
+                    inventory.set(inventorySlot, stack);
                 }
 
             }
