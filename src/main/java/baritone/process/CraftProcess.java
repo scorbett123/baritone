@@ -100,10 +100,22 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         return active;
     }
 
+    boolean removingResult = false;
+    int amountRemoved = 0;
+
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
 
-
+        if (removingResult) {
+            if (amountRemoved >= needed) {
+                removingResult = false;
+                amountRemoved = 0;
+                active = false;
+                return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
+            }
+            removeResult();
+            amountRemoved++;
+        }
 
 
         if (clicks != null) {
@@ -113,10 +125,9 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                 clicks.remove().click();
             } else {
-                HELPER.logDirect(currentAmount  + "   "+ needed);
-for(int i =0; i<needed; i++)
-                removeResult();
-                active = false;
+                HELPER.logDirect(currentAmount + "   " + needed);
+                removingResult = true;
+
 
             }
         }
