@@ -49,19 +49,23 @@ public class CraftCommand extends Command {
         Item toCraft = null;
         int quantity = 1;
        HELPER.logDirect( args.getArgs().toArray().length+"");
-        if(args.getArgs().toArray().length==1){
+        if (args.getArgs().toArray().length == 1) {
 
             toCraft = args.getDatatypeFor(ItemById.INSTANCE);
-HELPER.logDirect("args has one");
-        }else if (args.getArgs().toArray().length==2){
+            HELPER.logDirect("args has one");
+        } else if (args.getArgs().toArray().length == 2) {
             HELPER.logDirect("args has two");
             toCraft = args.getDatatypeFor(ItemById.INSTANCE);
             quantity = args.getAs(Integer.class);
         }
         WorldScanner.INSTANCE.repack(ctx);
-        logDirect("Crafting " + quantity+ toCraft);
+        if (toCraft == null) {
+            HELPER.logDirect("cannot find requested item");
+            return;
+        }
+        logDirect("Crafting " + quantity + "  " + toCraft.toString() + "s");
 
-        baritone.getCraftProcess().craft(toCraft,quantity);
+        baritone.getCraftProcess().craft(toCraft, quantity);
     }
 
     @Override

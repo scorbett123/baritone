@@ -52,10 +52,10 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     boolean active = false;
     Item item;
     int needed = -1, currentAmount = 0;
-    List<IRecipe> posibilities;
+    List<IRecipe> possibilities;
     BlockPos craftingTablePosition = null;
     CraftingRecipe recipe = null;
-    int DELAY = 0;
+    boolean useInventory = false;
     NonNullList<ItemStack> inventory = null;
     private LinkedList<AbstractClickAction> clicks = null;
 
@@ -73,15 +73,14 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         this.needed = amount;
         this.currentAmount = 0;
         inventory = mc.player.inventory.mainInventory;
-        posibilities = getPossibility();
-        HELPER.logDirect(posibilities.toArray().length + "");
-        // posibilities.forEach(recipe -> recipe.getIngredients().forEach(ingredient -> Arrays.stream(ingredient.getMatchingStacks()).forEach(a ->HELPER.logDirect(a.getDisplayName()))));
+        possibilities = getPossibility();
+
         craftingTablePosition = null;
-        recipe = decideBest(posibilities);
+        recipe = decideBest(possibilities);
         clicks = null;
 
         recipe.generateItems();
-        HELPER.logDirect(recipe.toString());
+
     }
 
     public List<IRecipe> getPossibility() {
@@ -123,18 +122,19 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
             amountRemoved++;
         }
 
+        if (mc.currentScreen instanceof GuiCrafting) {
+            if (clicks != null) {
 
-        if (clicks != null) {
-
-            if (clicks.size() > 0) {
-                HELPER.logDirect(clicks.size() + "   " + clicks.peekFirst().slotNumber);
-
-                clicks.remove().click();
-            } else {
-                HELPER.logDirect(currentAmount + "   " + needed);
-                removingResult = true;
+                if (clicks.size() > 0) {
 
 
+                    clicks.remove().click();
+                } else {
+
+                    removingResult = true;
+
+
+                }
             }
         }
         if (active) {
@@ -143,50 +143,62 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                 baritone.getInputOverrideHandler().clearAllKeys();
             }
 
-            if (craftingTablePosition == null) {
-                List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
-                craftingTablePosition = positions.get(0);
-                return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
+
+            if (recipe.use22) {
+
+                craftAll();
+
             } else {
-                // HELPER.logDirect(craftingTablePosition.distanceSq(mc.player.getPosition())+"");
-                if (craftingTablePosition.distanceSq(mc.player.getPosition()) <= 6) {
+                if (craftingTablePosition == null) {
+                    List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
+                    craftingTablePosition = positions.get(0);
+                    return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
+                } else {
 
-                    if (!(Helper.mc.currentScreen instanceof GuiCrafting)) {
+                    if (craftingTablePosition.distanceSq(mc.player.getPosition()) <= 6) {
 
-                        Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition);
-                        if (rot.isPresent() && isSafeToCancel) {
-                            baritone.getLookBehavior().updateTarget(rot.get(), true);
-                        }
+                        if (!(Helper.mc.currentScreen instanceof GuiCrafting)) {
 
-                        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
-
-
-                    } else {
-                        if (recipe != null) {
-                            recipe.generateItems();
-                            clicks = new LinkedList<>();
-
-                            for(currentAmount = currentAmount; currentAmount<needed ;currentAmount++){
-                                recipe.craft();
+                            Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition);
+                            if (rot.isPresent() && isSafeToCancel) {
+                                baritone.getLookBehavior().updateTarget(rot.get(), true);
                             }
-                            recipe=null;
+
+                            baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+
+
+                        } else {
+                            if (recipe != null) {
+                                craftAll();
+                            }
                         }
+
+
                     }
 
-
                 }
-
-}
-            return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
-        }else{
-        return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);}
+            }
+        }
+        return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
     }
 
     @Override
     public void onLostControl() {
-active=false;
+        active = false;
         if (clicks != null) {
             clicks.clear();
+        }
+    }
+
+    public void craftAll() {
+        if (recipe != null) {
+            recipe.generateItems();
+            clicks = new LinkedList<>();
+
+            for (; currentAmount < needed; currentAmount++) {
+                recipe.craft();
+            }
+            recipe = null;
         }
     }
 
@@ -197,7 +209,7 @@ active=false;
 
     public void removeResult() {
         new LeftClickAction(0).click();
-        HELPER.logDirect(findSlotFor(this.item)+"");
+
         new LeftClickAction(findSlotFor(this.item)).click();
     }
 
@@ -324,6 +336,7 @@ active=false;
             ClickType clickType = getClickType();
 
             final GuiContainer screen = (GuiContainer) Helper.mc.currentScreen;
+            assert screen != null;
             Helper.mc.playerController.windowClick(
                     screen.inventorySlots.windowId, slotNumber, clickKey, clickType,
                     Helper.mc.player);
@@ -379,7 +392,7 @@ active=false;
     public class CraftingRecipe {
         public Ingredient[][] ingredients = new Ingredient[3][3];
         public Item[][] items = new Item[3][3];
-        int loop = 0;
+        boolean use22 = false;
         int x, y;
         List<ItemStack> preferableItems = new ArrayList<>();
 
@@ -388,10 +401,15 @@ active=false;
 
             if (recipe instanceof ShapedRecipes) {
                 ShapedRecipes shapedRecipes = (ShapedRecipes) recipe;
-
+                if (shapedRecipes.canFit(2, 2)) {
+                    use22 = true;
+                    useInventory = true;
+                    ingredients = new Ingredient[2][2];
+                    items = new Item[2][2];
+                }
                 int width = shapedRecipes.getWidth();
                 int height = shapedRecipes.getHeight();
-
+                shapedRecipes.canFit(2, 2);
 
                 for (int x = 0; x < width; x++) {
                     for (int y = 0; y < height; y++) {
@@ -423,7 +441,7 @@ active=false;
 
                     }
                 }
-                HELPER.logDirect(builder1.toString());
+
                 builder.append(builder1);
             }
 
@@ -475,17 +493,21 @@ active=false;
         }
 
         public void craft() {
-
-            final GuiContainer screen = (GuiContainer) mc.currentScreen;
-
+            final GuiContainer screen = null;
+            if (useInventory) {
+                screen = mc.
+            } else {
+                screen = (GuiContainer) mc.currentScreen;
+            }
+            assert screen != null;
             for (int y = 0; y < items.length; y++) {
                 for (int x = 0; x < items[y].length; x++) {
 
 
-                    int slotid = searchInventory(items[x][y]);
+                    int slotId = searchInventory(items[x][y]);
                     Slot from = null;
-                    if (slotid != -1) {
-                        from = screen.inventorySlots.getSlot(slotid);
+                    if (slotId != -1) {
+                        from = screen.inventorySlots.getSlot(slotId);
                     }
                     Slot to = screen.inventorySlots.getSlot((x + y * 3) + 1);
 
@@ -493,7 +515,6 @@ active=false;
 
 
                     if (from == null) {
-                        HELPER.logDirect("from is null");
                         continue;
 
                     }
@@ -502,7 +523,7 @@ active=false;
                     int toMove = Math.min(amount, limit - getSlotContentCount(to));
                     int amountMoved = 0;
 
-                    HELPER.logDirect(x + "  :   " + y);
+
                     if (getSlotContentCount(from) <= toMove && getSlotContentCount(from) > 0) {
                         amountMoved += moveAll(from, to);
                     } else if (getSlotContentCount(from) - getSlotContentCount(from) / 2 <= toMove
@@ -516,12 +537,14 @@ active=false;
 
 
                     stack.setCount(inventory.get(inventorySlot).getCount() - 1);
-                    HELPER.logDirect("Setting count to" + stack.getCount() + " of " + stack.getDisplayName() + " in slot " + inventorySlot);
+
                     inventory.set(inventorySlot, stack);
+                    stack.setCount(amountMoved);
+
                 }
 
             }
-           // clicks.stream().forEach(click -> HELPER.logDirect(click.toString()));
+
         }
     }
 }
