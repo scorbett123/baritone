@@ -35,7 +35,7 @@ import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.ClickType;
-import net.minecraft.inventory.InventoryCrafting;
+
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -277,25 +277,8 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         return recipe2.orElse(null);
     }
 
-    private int moveAll(Slot from, Slot to) {
-        int oldCount = getSlotContentCount(to);
 
-        addClick(new LeftClickAction(from.slotNumber));
-        addClick(new LeftClickAction(to.slotNumber));
-
-        return oldCount;
-    }
-
-    private int moveHalf(Slot from, Slot to) {
-        int oldCount = getSlotContentCount(to);
-
-        addClick(new RightClickAction(from.slotNumber));
-        addClick(new LeftClickAction(to.slotNumber));
-
-        return oldCount / 2;
-    }
-
-    private int moveStackPart(Slot from, Slot to, int count) {
+    private int moveItemAmount(Slot from, Slot to, int count) {
         int oldCount = getSlotContentCount(to);
 
         addClick(new LeftClickAction(from.slotNumber));
@@ -537,7 +520,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                     int amountMoved = 0;
 
 
-                    amountMoved += moveStackPart(from, to, toMove);
+                    amountMoved += moveItemAmount(from, to, toMove);
 
                     int inventorySlot;
                     if (useInventory) {
