@@ -31,9 +31,11 @@ import baritone.pathing.movement.CalculationContext;
 import baritone.utils.BaritoneProcessHelper;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiCrafting;
+import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.ClickType;
+import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -65,6 +67,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
     @Override
     public void craft(Item item, int amount) {
+        useInventory = false;
         if (item == null) {
             return;
         }
@@ -122,7 +125,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
             amountRemoved++;
         }
 
-        if (mc.currentScreen instanceof GuiCrafting) {
+        if (mc.currentScreen instanceof GuiCrafting || mc.currentScreen instanceof GuiInventory) {
             if (clicks != null) {
 
                 if (clicks.size() > 0) {
@@ -143,28 +146,35 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                 baritone.getInputOverrideHandler().clearAllKeys();
             }
 
+            if (recipe != null) {
+                if (recipe.use22) {
 
-            if (recipe.use22) {
+                    useInventory = true;
+                    mc.displayGuiScreen(new GuiInventory(mc.player));
+                    craftAll();
+                    return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
+                }
+            }
+            if (useInventory) {
+                return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
 
-                craftAll();
-
+            }
+            if (craftingTablePosition == null) {
+                List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
+                craftingTablePosition = positions.get(0);
+                return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
             } else {
-                if (craftingTablePosition == null) {
-                    List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
-                    craftingTablePosition = positions.get(0);
-                    return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
-                } else {
 
-                    if (craftingTablePosition.distanceSq(mc.player.getPosition()) <= 6) {
+                if (craftingTablePosition.distanceSq(mc.player.getPosition()) <= 6) {
 
-                        if (!(Helper.mc.currentScreen instanceof GuiCrafting)) {
+                    if (!(Helper.mc.currentScreen instanceof GuiCrafting)) {
 
-                            Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition);
-                            if (rot.isPresent() && isSafeToCancel) {
-                                baritone.getLookBehavior().updateTarget(rot.get(), true);
-                            }
+                        Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition);
+                        if (rot.isPresent() && isSafeToCancel) {
+                            baritone.getLookBehavior().updateTarget(rot.get(), true);
+                        }
 
-                            baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+                        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
 
 
                         } else {
@@ -178,7 +188,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                 }
             }
-        }
+
         return new PathingCommand(null, PathingCommandType.SET_GOAL_AND_PATH);
     }
 
@@ -192,6 +202,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
     public void craftAll() {
         if (recipe != null) {
+
             recipe.generateItems();
             clicks = new LinkedList<>();
 
@@ -220,7 +231,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
             if (
                     mainInventory.get(i).getItem() == item) {
-                return convertToPlayerInventorySlot(i) + 10;
+                return useInventory ? convertToPlayerInventorySlot(i) + 9 : 10 + convertToPlayerInventorySlot(i);
             }
 
 
@@ -231,7 +242,8 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
             if (
                     mainInventory.get(i).getItem() == Items.AIR) {
-                return convertToPlayerInventorySlot(i) + 10;
+
+                return useInventory ? convertToPlayerInventorySlot(i) + 9 : 10 + convertToPlayerInventorySlot(i);
             }
 
 
@@ -255,7 +267,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
             return -1;
         }
 
-        return 10 + convertToPlayerInventorySlot(inventorySlot);
+        return useInventory ? convertToPlayerInventorySlot(inventorySlot) + 9 : 10 + convertToPlayerInventorySlot(inventorySlot);
     }
 
     public CraftingRecipe decideBest(List<IRecipe> recipes) {
@@ -306,9 +318,9 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     }
 
     int convertToPlayerInventorySlot(int inventorySlot) {
-        // Offset: 10 blocks. 8
+        // Offset: 10 blocks.
         if (inventorySlot < 9) {
-            return inventorySlot + 9 * 3; // 35
+            return inventorySlot + 9 * 3; //
         } else {
             return inventorySlot - 9;
         }
@@ -493,28 +505,29 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         }
 
         public void craft() {
-            final GuiContainer screen = null;
-            if (useInventory) {
-                screen = mc.
-            } else {
-                screen = (GuiContainer) mc.currentScreen;
-            }
-            assert screen != null;
+            GuiContainer screen;
+
+
+            screen = (GuiContainer) mc.currentScreen;
+
+
             for (int y = 0; y < items.length; y++) {
                 for (int x = 0; x < items[y].length; x++) {
 
-
+                    assert screen != null;
                     int slotId = searchInventory(items[x][y]);
                     Slot from = null;
                     if (slotId != -1) {
-                        from = screen.inventorySlots.getSlot(slotId);
+                        from = screen.inventorySlots.
+                                getSlot(slotId);
                     }
-                    Slot to = screen.inventorySlots.getSlot((x + y * 3) + 1);
+                    Slot to = screen.inventorySlots.getSlot((x + y * items.length) + 1);
 
                     int amount = 1;
 
 
                     if (from == null) {
+
                         continue;
 
                     }
@@ -524,15 +537,14 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                     int amountMoved = 0;
 
 
-                    if (getSlotContentCount(from) <= toMove && getSlotContentCount(from) > 0) {
-                        amountMoved += moveAll(from, to);
-                    } else if (getSlotContentCount(from) - getSlotContentCount(from) / 2 <= toMove
-                            && getSlotContentCount(from) > 0) {
-                        amountMoved += moveHalf(from, to);
-                    } else if (toMove > 0 && getSlotContentCount(from) > 0) {
-                        amountMoved += moveStackPart(from, to, toMove);
+                    amountMoved += moveStackPart(from, to, toMove);
+
+                    int inventorySlot;
+                    if (useInventory) {
+                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber);
+                    } else {
+                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber) - 10;
                     }
-                    int inventorySlot = convertFromPlayerInventorySlot(from.slotNumber) - 10;
                     ItemStack stack = inventory.get(inventorySlot);
 
 
