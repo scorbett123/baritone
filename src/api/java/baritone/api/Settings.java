@@ -30,8 +30,8 @@ import java.awt.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -60,6 +60,19 @@ public final class Settings {
      * Allow Baritone to move items in your inventory to your hotbar
      */
     public final Setting<Boolean> allowInventory = new Setting<>(false);
+
+    /**
+     * Disable baritone's auto-tool at runtime, but still assume that another mod will provide auto tool functionality
+     * <p>
+     * Specifically, path calculation will still assume that an auto tool wil run at execution time, even though
+     * Baritone itself will not do that.
+     */
+    public final Setting<Boolean> assumeExternalAutoTool = new Setting<>(false);
+
+    /**
+     * If this setting is on, no auto tool will occur at all, not at calculation time nor execution time
+     */
+    public final Setting<Boolean> disableAutoTool = new Setting<>(false);
 
     /**
      * It doesn't actually take twenty ticks to place a block, this cost is so high
@@ -199,6 +212,15 @@ public final class Settings {
      * If a schematic asks for air at a certain position, and that position currently contains a block on this list, it will be treated as correct.
      */
     public final Setting<List<Block>> buildIgnoreBlocks = new Setting<>(new ArrayList<>(Arrays.asList(
+
+    )));
+
+    /**
+     * A list of blocks to become air
+     * <p>
+     * If a schematic asks for a block on this list, only air will be accepted at that location (and nothing on buildIgnoreBlocks)
+     */
+    public final Setting<List<Block>> okIfAir = new Setting<>(new ArrayList<>(Arrays.asList(
 
     )));
 
@@ -438,6 +460,11 @@ public final class Settings {
      * your Y coordinate's accuracy doesn't matter at all until you get much much closer.
      */
     public final Setting<Boolean> simplifyUnloadedYCoord = new Setting<>(true);
+
+    /**
+     * Whenever a block changes, repack the whole chunk that it's in
+     */
+    public final Setting<Boolean> repackOnAnyBlockChange = new Setting<>(true);
 
     /**
      * If a movement takes this many ticks more than its initial cost estimate, cancel it
@@ -1062,9 +1089,34 @@ public final class Settings {
     public final Setting<Boolean> renderSelectionCorners = new Setting<>(true);
 
     /**
-     * Desktop Notifications
+     * Desktop notifications
      */
     public final Setting<Boolean> desktopNotifications = new Setting<>(false);
+
+    /**
+     * Desktop notification on path complete
+     */
+    public final Setting<Boolean> notificationOnPathComplete = new Setting<>(true);
+
+    /**
+     * Desktop notification on farm fail
+     */
+    public final Setting<Boolean> notificationOnFarmFail = new Setting<>(true);
+
+    /**
+     * Desktop notification on build finished
+     */
+    public final Setting<Boolean> notificationOnBuildFinished = new Setting<>(true);
+
+    /**
+     * Desktop notification on explore finished
+     */
+    public final Setting<Boolean> notificationOnExploreFinished = new Setting<>(true);
+
+    /**
+     * Desktop notification on mine fail
+     */
+    public final Setting<Boolean> notificationOnMineFail = new Setting<>(true);
 
     /**
      * A map of lowercase setting field names to their respective setting
