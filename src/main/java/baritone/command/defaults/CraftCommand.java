@@ -52,9 +52,8 @@ public class CraftCommand extends Command {
         if (args.getArgs().toArray().length == 1) {
 
             toCraft = args.getDatatypeFor(ItemById.INSTANCE);
-            HELPER.logDirect("args has one");
+
         } else if (args.getArgs().toArray().length == 2) {
-            HELPER.logDirect("args has two");
             toCraft = args.getDatatypeFor(ItemById.INSTANCE);
             quantity = args.getAs(Integer.class);
         }
@@ -64,7 +63,7 @@ public class CraftCommand extends Command {
             return;
         }
         logDirect("Crafting " + quantity + "  " + toCraft.toString() + "s");
-
+        logDirect("the id is " + Item.getIdFromItem(toCraft));
         baritone.getCraftProcess().craft(toCraft, quantity);
     }
 

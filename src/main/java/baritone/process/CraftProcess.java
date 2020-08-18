@@ -43,6 +43,7 @@ import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.ShapedRecipes;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
 
@@ -162,6 +163,19 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
             if (craftingTablePosition == null) {
                 List<BlockPos> positions = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
                 craftingTablePosition = positions.get(0);
+                if (!(craftingTablePosition.distanceSq(mc.player.getPosition()) <= 12)) {
+                    int id = searchInventory(Item.getItemById(58));
+                    if (useInventory)
+                        id -= 9;
+                    else
+                        id -= 10;
+
+                    List<BlockPos> positionsPlace = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.AIR), 10, new ArrayList<>(), new ArrayList<>(), Collections.emptyList());
+                    HELPER.logDirect(id + "");
+                    mc.player.inventory.currentItem = id;
+                    mc.playerController.clickBlock(positionsPlace.get(2), EnumFacing.UP);
+                    craftingTablePosition = positionsPlace.get(2);
+                }
                 return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
             } else {
 
@@ -524,15 +538,18 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                     int inventorySlot;
                     if (useInventory) {
-                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber);
+                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber - 10);
                     } else {
-                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber) - 10;
+                        inventorySlot = convertFromPlayerInventorySlot(from.slotNumber - 11);
                     }
                     ItemStack stack = inventory.get(inventorySlot);
 
-
-                    stack.setCount(inventory.get(inventorySlot).getCount() - 1);
-
+                    int countToSet = inventory.get(inventorySlot).getCount() - 1;
+                    if (countToSet < 1) {
+                        inventory.set(inventorySlot, new ItemStack(Items.AIR, 0));
+                        continue;
+                    } else
+                        stack.setCount(countToSet);
                     inventory.set(inventorySlot, stack);
                     stack.setCount(amountMoved);
 

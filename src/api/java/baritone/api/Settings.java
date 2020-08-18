@@ -155,6 +155,15 @@ public final class Settings {
     public final Setting<Boolean> allowDownward = new Setting<>(true);
 
     /**
+     * allow baritone to place a crafting table to craft with
+     * <p>
+     * turning this off will mean that it will look for a crafting table and try and path find,
+     * turning this off will slow crafting down.
+     */
+
+    public final Setting<Boolean> allowCraftingPlace = new Setting<>(true);
+
+    /**
      * Blocks that Baritone is allowed to place (as throwaway, for sneak bridging, pillaring, etc.)
      */
     public final Setting<List<Item>> acceptableThrowawayItems = new Setting<>(new ArrayList<>(Arrays.asList(
