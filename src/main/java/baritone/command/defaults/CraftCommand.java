@@ -62,8 +62,9 @@ public class CraftCommand extends Command {
             HELPER.logDirect("cannot find requested item");
             return;
         }
-        logDirect("Crafting " + quantity + "  " + toCraft.toString() + "s");
-        logDirect("the id is " + Item.getIdFromItem(toCraft));
+
+        logDirect(String.format("crafting %s %ss", quantity, toCraft.getDefaultInstance().getDisplayName()));
+        // logDirect("the id is " + Item.getIdFromItem(toCraft));
         baritone.getCraftProcess().craft(toCraft, quantity);
     }
 

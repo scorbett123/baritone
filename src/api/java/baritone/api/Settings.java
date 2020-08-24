@@ -172,9 +172,18 @@ public final class Settings {
      * <p>
      * turning this off will mean that it will look for a crafting table and try and path find,
      * turning this off will slow crafting down.
+     * <p>
+     * currently it is really buggy so I recommend having it off rather than leaving it on.
      */
 
-    public final Setting<Boolean> allowCraftingPlace = new Setting<>(true);
+    public final Setting<Boolean> allowCraftingPlace = new Setting<>(false);
+
+    /**
+     * The minimum distance needed to place a crafting table when allowCraftingPlace is null;
+     * Measured in blocks
+     */
+
+    public final Setting<Integer> craftingPlaceMinDistance = new Setting<>(50);
 
     /**
      * Blocks that Baritone is allowed to place (as throwaway, for sneak bridging, pillaring, etc.)
@@ -1118,10 +1127,6 @@ public final class Settings {
      */
     public final Setting<Boolean> notificationOnMineFail = new Setting<>(true);
 
-    /**
-     *
-     */
-    public final Setting<Integer> fullBrightLevel = new Setting<>(16);
 
     /**
      * A map of lowercase setting field names to their respective setting
