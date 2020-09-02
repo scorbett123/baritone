@@ -25,11 +25,11 @@ import baritone.api.utils.Helper;
 import baritone.api.utils.IPlayerContext;
 import baritone.behavior.*;
 import baritone.cache.WorldProvider;
+import baritone.command.manager.CommandManager;
 import baritone.event.GameEventHandler;
 import baritone.process.*;
 import baritone.selection.SelectionManager;
 import baritone.utils.*;
-import baritone.command.manager.CommandManager;
 import baritone.utils.player.PrimaryPlayerContext;
 import net.minecraft.client.Minecraft;
 
@@ -57,18 +57,18 @@ public class Baritone implements IBaritone {
         if (!Files.exists(dir.toPath())) {
             try {
                 Files.createDirectories(dir.toPath());
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
     }
 
+    public BlockStateInterface bsi;
     private GameEventHandler gameEventHandler;
-
     private PathingBehavior pathingBehavior;
     private LookBehavior lookBehavior;
     private MemoryBehavior memoryBehavior;
     private InventoryBehavior inventoryBehavior;
     private InputOverrideHandler inputOverrideHandler;
-
     private FollowProcess followProcess;
     private MineProcess mineProcess;
     private GetToBlockProcess getToBlockProcess;
@@ -77,15 +77,12 @@ public class Baritone implements IBaritone {
     private ExploreProcess exploreProcess;
     private BackfillProcess backfillProcess;
     private FarmProcess farmProcess;
-
+    private CraftProcess craftProcess;
     private PathingControlManager pathingControlManager;
     private SelectionManager selectionManager;
     private CommandManager commandManager;
-
     private IPlayerContext playerContext;
     private WorldProvider worldProvider;
-
-    public BlockStateInterface bsi;
 
     Baritone() {
         this.gameEventHandler = new GameEventHandler(this);
@@ -112,6 +109,7 @@ public class Baritone implements IBaritone {
             exploreProcess = new ExploreProcess(this);
             backfillProcess = new BackfillProcess(this);
             farmProcess = new FarmProcess(this);
+            craftProcess = new CraftProcess(this);
         }
 
         this.worldProvider = new WorldProvider();
@@ -121,6 +119,18 @@ public class Baritone implements IBaritone {
         if (BaritoneAutoTest.ENABLE_AUTO_TEST) {
             this.gameEventHandler.registerEventListener(BaritoneAutoTest.INSTANCE);
         }
+    }
+
+    public static Settings settings() {
+        return BaritoneAPI.getSettings();
+    }
+
+    public static File getDir() {
+        return dir;
+    }
+
+    public static Executor getExecutor() {
+        return threadPool;
     }
 
     @Override
@@ -184,6 +194,11 @@ public class Baritone implements IBaritone {
         return this.mineProcess;
     }
 
+    @Override
+    public CraftProcess getCraftProcess() {
+        return this.craftProcess;
+    }
+
     public FarmProcess getFarmProcess() {
         return this.farmProcess;
     }
@@ -219,19 +234,8 @@ public class Baritone implements IBaritone {
             try {
                 Thread.sleep(100);
                 Helper.mc.addScheduledTask(() -> Helper.mc.displayGuiScreen(new GuiClick()));
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }).start();
-    }
-
-    public static Settings settings() {
-        return BaritoneAPI.getSettings();
-    }
-
-    public static File getDir() {
-        return dir;
-    }
-
-    public static Executor getExecutor() {
-        return threadPool;
     }
 }

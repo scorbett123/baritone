@@ -168,6 +168,22 @@ public final class Settings {
     public final Setting<Boolean> allowDownward = new Setting<>(true);
 
     /**
+     * allow baritone to place a crafting table to craft with
+     * <p>
+     * turning this off will mean that it will look for a crafting table and try and path find,
+     * turning this off will slow crafting down.
+     */
+
+    public final Setting<Boolean> allowCraftingPlace = new Setting<>(true);
+
+    /**
+     * The minimum distance needed to place a crafting table when allowCraftingPlace is null;
+     * Measured in blocks
+     */
+
+    public final Setting<Integer> craftingPlaceMinDistance = new Setting<>(50);
+
+    /**
      * Blocks that Baritone is allowed to place (as throwaway, for sneak bridging, pillaring, etc.)
      */
     public final Setting<List<Item>> acceptableThrowawayItems = new Setting<>(new ArrayList<>(Arrays.asList(
@@ -188,7 +204,6 @@ public final class Settings {
      * Blocks that Baritone is not allowed to break
      */
     public final Setting<List<Block>> blocksToAvoidBreaking = new Setting<>(new ArrayList<>(Arrays.asList( // TODO can this be a HashSet or ImmutableSet?
-            Blocks.CRAFTING_TABLE,
             Blocks.FURNACE,
             Blocks.LIT_FURNACE,
             Blocks.CHEST,
@@ -1108,6 +1123,7 @@ public final class Settings {
      * Desktop notification on mine fail
      */
     public final Setting<Boolean> notificationOnMineFail = new Setting<>(true);
+
 
     /**
      * A map of lowercase setting field names to their respective setting

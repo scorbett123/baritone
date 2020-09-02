@@ -59,6 +59,13 @@ public interface IBaritone {
     IMineProcess getMineProcess();
 
     /**
+     * @return The {@link ICraftProcess} instance
+     * @see ICraftProcess
+     */
+    ICraftProcess getCraftProcess();
+
+
+    /**
      * @return The {@link IBuilderProcess} instance
      * @see IBuilderProcess
      */
