@@ -69,6 +69,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     private int amountRemoved = 0;
     private LinkedList<AbstractClickAction> clicks = null;
     private boolean usingMyOwnCraftingTable = false;
+    private int delay = 0;
 
     public CraftProcess(Baritone baritone) {
         super(baritone);
@@ -115,10 +116,18 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         recipe.generateItems();
         shouldMine = false;
         shouldBuild = false;
+        delay = 0;
     }
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+        if (delay != 0) {
+            if (delay < 3) {
+                delay++;
+                return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+            } else
+                delay = 0;
+        }
         if (baritone.getBuilderProcess().isActive() && shouldBuild) {
             return new PathingCommand(null, PathingCommandType.DEFER);
         }
@@ -236,12 +245,16 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
 
                     if (!(Helper.mc.currentScreen instanceof GuiCrafting)) {
 
-                        Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition.subtract(new Vec3i(1, 0, 0)));
+                        Optional<Rotation> rot = RotationUtils.reachable(ctx, craftingTablePosition);
+
                         if (rot.isPresent() && isSafeToCancel) {
                             baritone.getLookBehavior().updateTarget(rot.get(), true);
+                        } else {
+                            HELPER.logDebug("can't update rotation  " + rot.toString());
                         }
 
                         baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+
 
                     } else {
                         if (recipe != null) {
@@ -264,6 +277,12 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
             clicks.clear();
         active = false;
         craftingTablePosition = null;
+    }
+
+    @Override
+    public double priority() {
+        //this value doesn't matter as long as it is above the priority of builder process.
+        return baritone.getBuilderProcess().priority() + 0.1;
     }
 
     public void craftAll() {
@@ -594,6 +613,11 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
                         inventorySlot = convertFromPlayerInventorySlot(from.slotNumber - 10);
                     }
 //update our inventory.
+                    if (inventorySlot == 36) {
+                        onLostControl();
+                        HELPER.logDirect("please remove items from the first hotbar slot, this is a quick fix to a known bug.");
+                        return;
+                    }
                     ItemStack itemStack = inventory.get(inventorySlot);
                     itemStack.setCount(itemStack.getCount() - 1);
                     if (itemStack.getCount() <= 0) {
