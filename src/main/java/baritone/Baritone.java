@@ -21,15 +21,16 @@ import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.Settings;
 import baritone.api.event.listener.IEventBus;
+import baritone.api.process.ICraftProcess;
 import baritone.api.utils.Helper;
 import baritone.api.utils.IPlayerContext;
 import baritone.behavior.*;
 import baritone.cache.WorldProvider;
+import baritone.command.manager.CommandManager;
 import baritone.event.GameEventHandler;
 import baritone.process.*;
 import baritone.selection.SelectionManager;
 import baritone.utils.*;
-import baritone.command.manager.CommandManager;
 import baritone.utils.player.PrimaryPlayerContext;
 import net.minecraft.client.Minecraft;
 
@@ -47,8 +48,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Baritone implements IBaritone {
 
-    private static ThreadPoolExecutor threadPool;
-    private static File dir;
+    private static final ThreadPoolExecutor threadPool;
+    private static final File dir;
 
     static {
         threadPool = new ThreadPoolExecutor(4, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
@@ -57,33 +58,35 @@ public class Baritone implements IBaritone {
         if (!Files.exists(dir.toPath())) {
             try {
                 Files.createDirectories(dir.toPath());
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
     }
 
-    private GameEventHandler gameEventHandler;
+    private final GameEventHandler gameEventHandler;
 
-    private PathingBehavior pathingBehavior;
-    private LookBehavior lookBehavior;
-    private MemoryBehavior memoryBehavior;
-    private InventoryBehavior inventoryBehavior;
-    private InputOverrideHandler inputOverrideHandler;
+    private final PathingBehavior pathingBehavior;
+    private final LookBehavior lookBehavior;
+    private final MemoryBehavior memoryBehavior;
+    private final InventoryBehavior inventoryBehavior;
+    private final InputOverrideHandler inputOverrideHandler;
 
-    private FollowProcess followProcess;
-    private MineProcess mineProcess;
-    private GetToBlockProcess getToBlockProcess;
-    private CustomGoalProcess customGoalProcess;
-    private BuilderProcess builderProcess;
-    private ExploreProcess exploreProcess;
-    private BackfillProcess backfillProcess;
-    private FarmProcess farmProcess;
+    private final FollowProcess followProcess;
+    private final MineProcess mineProcess;
+    private final GetToBlockProcess getToBlockProcess;
+    private final CustomGoalProcess customGoalProcess;
+    private final BuilderProcess builderProcess;
+    private final ExploreProcess exploreProcess;
+    private final BackfillProcess backfillProcess;
+    private final FarmProcess farmProcess;
+    private final CraftProcess craftProcess;
 
-    private PathingControlManager pathingControlManager;
-    private SelectionManager selectionManager;
-    private CommandManager commandManager;
+    private final PathingControlManager pathingControlManager;
+    private final SelectionManager selectionManager;
+    private final CommandManager commandManager;
 
-    private IPlayerContext playerContext;
-    private WorldProvider worldProvider;
+    private final IPlayerContext playerContext;
+    private final WorldProvider worldProvider;
 
     public BlockStateInterface bsi;
 
@@ -112,6 +115,7 @@ public class Baritone implements IBaritone {
             this.pathingControlManager.registerProcess(exploreProcess = new ExploreProcess(this));
             this.pathingControlManager.registerProcess(backfillProcess = new BackfillProcess(this));
             this.pathingControlManager.registerProcess(farmProcess = new FarmProcess(this));
+            this.pathingControlManager.registerProcess(craftProcess = new CraftProcess(this));
         }
 
         this.worldProvider = new WorldProvider();
@@ -164,6 +168,11 @@ public class Baritone implements IBaritone {
     @Override
     public BuilderProcess getBuilderProcess() {
         return this.builderProcess;
+    }
+
+    @Override
+    public ICraftProcess getCraftProcess() {
+        return this.craftProcess;
     }
 
     public InventoryBehavior getInventoryBehavior() {

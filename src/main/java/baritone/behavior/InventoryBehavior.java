@@ -19,6 +19,7 @@ package baritone.behavior;
 
 import baritone.Baritone;
 import baritone.api.event.events.TickEvent;
+import baritone.api.utils.Helper;
 import baritone.utils.ToolSet;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
@@ -182,5 +183,41 @@ public final class InventoryBehavior extends Behavior {
             }
         }
         return false;
+    }
+
+    public void placeOneItem(int from, int to) {
+        ctx.playerController().windowClick(ctx.player().inventoryContainer.windowId, from, 0, ClickType.PICKUP, ctx.player());
+        ctx.playerController().windowClick(ctx.player().inventoryContainer.windowId, to, 1, ClickType.PICKUP, ctx.player());
+        ctx.playerController().windowClick(ctx.player().inventoryContainer.windowId, from, 0, ClickType.PICKUP, ctx.player());
+    }
+
+    public void takeResultItem() {
+        ctx.playerController().windowClick(ctx.player().inventoryContainer.windowId, 0, 0, ClickType.QUICK_MOVE, ctx.player());
+    }
+
+    public boolean doesInventoryContain(Item item) {
+        for (ItemStack i : Helper.mc.player.inventory.mainInventory) {
+            if (i.getItem() == item) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public int searchInventory(Item item) {
+        NonNullList<ItemStack> mainInventory = Helper.mc.player.inventory.mainInventory;
+        int inventorySlot = -1;
+        for (int i = 0; i < mainInventory.size(); i++) {
+
+            if (item != null && item.equals(
+                    mainInventory.get(i).getItem())) {
+                inventorySlot = i;
+            }
+        }
+        if (inventorySlot < 0) {
+            return -1;
+        }
+
+        return inventorySlot < 9 ? inventorySlot + 9 * 3 : inventorySlot - 9;
     }
 }
