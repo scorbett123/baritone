@@ -18,25 +18,28 @@
 package baritone.process;
 
 import baritone.Baritone;
+import baritone.api.pathing.goals.GoalGetToBlock;
 import baritone.api.process.ICraftProcess;
 import baritone.api.process.PathingCommand;
 import baritone.api.process.PathingCommandType;
+import baritone.api.utils.BlockOptionalMetaLookup;
 import baritone.api.utils.Recipe;
+import baritone.pathing.movement.CalculationContext;
 import baritone.utils.BaritoneProcessHelper;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.Ingredient;
+import net.minecraft.util.math.BlockPos;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess {
     private final LinkedList<int[]> clicks = new LinkedList<>();
     boolean active = false;
     List<IRecipe> possibleRecipes = new ArrayList<>();
-    int ticks = 0;
+    int ticks = -1;
+    BlockPos craftingTablePosition;
     Recipe recipeToCraft = new Recipe();
 
     public CraftProcess(Baritone baritone) {
@@ -51,15 +54,21 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         ticks++;
-        if (clicks.size() > 0) {
-            int[] current = clicks.remove();
-            HELPER.logDirect(current[0] + "    " + current[1]);
-            baritone.getInventoryBehavior().placeOneItem(current[0], current[1]);
-            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+        if (recipeToCraft.canBeCraftedInInventory()) {
+            if (clicks.size() > ticks) {
+                int[] current = clicks.get(ticks);
+                HELPER.logDirect(current[0] + "    " + current[1]);
+                baritone.getInventoryBehavior().placeOneItem(current[0], current[1]);
+                return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+            }
+        } else {
+            craftingTablePosition = MineProcess.searchWorld(new CalculationContext(baritone), new BlockOptionalMetaLookup(Blocks.CRAFTING_TABLE), 1, new ArrayList<>(), new ArrayList<>(), Collections.emptyList()).get(0);
+            return new PathingCommand(new GoalGetToBlock(craftingTablePosition), PathingCommandType.SET_GOAL_AND_PATH);
         }
         baritone.getInventoryBehavior().takeResultItem();
         active = false;
         return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+
     }
 
     @Override
@@ -93,7 +102,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         }
         this.recipeToCraft.getFromIRecipe(recipeToCraft);
         generateClicks(this.recipeToCraft);
-        ticks = 0;
+        ticks = -1;
 
     }
 
