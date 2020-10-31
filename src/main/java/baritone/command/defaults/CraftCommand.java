@@ -23,6 +23,8 @@ import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.datatypes.ItemById;
 import baritone.api.command.exception.CommandException;
 import baritone.api.utils.Recipe;
+import baritone.cache.WorldScanner;
+import net.minecraft.item.Item;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -35,13 +37,28 @@ public class CraftCommand extends Command {
 
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
+        args.requireMax(2);
+        args.requireMin(1);
 
-        baritone.getCraftProcess().craft(Recipe.getRecipesForItem(args.getDatatypeFor(ItemById.INSTANCE)));
+        Item toCraft;
+        int quantity;
+        toCraft = args.getDatatypeFor(ItemById.INSTANCE);
+        quantity = args.getArgs().size() == 0 ? 1 : args.getAs(Integer.class);
+
+        WorldScanner.INSTANCE.repack(ctx);
+        if (toCraft == null) {
+            HELPER.logDirect("cannot find requested item");
+            return;
+        }
+
+        HELPER.logDirect(String.format("crafting %s %s%s", quantity, toCraft.getDefaultInstance().getDisplayName(), quantity == 1 ? "" : "s"));
+        // logDirect("the id is " + Item.getIdFromItem(toCraft));
+        baritone.getCraftProcess().craft(Recipe.getRecipesForItem(toCraft), quantity);
     }
 
 
     @Override
-    public Stream<String> tabComplete(String label, IArgConsumer args) throws CommandException {
+    public Stream<String> tabComplete(String label, IArgConsumer args) {
         return null;
     }
 

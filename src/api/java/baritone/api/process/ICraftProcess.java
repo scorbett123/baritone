@@ -23,6 +23,6 @@ import java.util.List;
 
 public interface ICraftProcess {
 
-    void craft(List<IRecipe> recipe);
+    void craft(List<IRecipe> recipe, int amount);
 
 }

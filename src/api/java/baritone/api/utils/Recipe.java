@@ -52,6 +52,9 @@ public class Recipe {
                 canBeCraftedInInventory = true;
                 ingredientGrid = new Ingredient[2][2];
                 itemGrid = new Item[2][2];
+            } else {
+                ingredientGrid = new Ingredient[3][3];
+                itemGrid = new Item[3][3];
             }
             int width = ((ShapedRecipes) recipe).getWidth();
             int height = ((ShapedRecipes) recipe).getHeight();
