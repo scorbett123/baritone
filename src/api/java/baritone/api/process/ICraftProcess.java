@@ -17,12 +17,13 @@
 
 package baritone.api.process;
 
+import net.minecraft.item.Item;
 import net.minecraft.item.crafting.IRecipe;
 
 import java.util.List;
 
 public interface ICraftProcess {
 
-    void craft(List<IRecipe> recipe, int amount);
+    void craft(Item item, int amount);
 
 }

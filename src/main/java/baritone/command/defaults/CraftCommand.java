@@ -22,7 +22,6 @@ import baritone.api.command.Command;
 import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.datatypes.ItemById;
 import baritone.api.command.exception.CommandException;
-import baritone.api.utils.Recipe;
 import baritone.cache.WorldScanner;
 import net.minecraft.item.Item;
 
@@ -53,7 +52,7 @@ public class CraftCommand extends Command {
 
         HELPER.logDirect(String.format("crafting %s %s%s", quantity, toCraft.getDefaultInstance().getDisplayName(), quantity == 1 ? "" : "s"));
         // logDirect("the id is " + Item.getIdFromItem(toCraft));
-        baritone.getCraftProcess().craft(Recipe.getRecipesForItem(toCraft), quantity);
+        baritone.getCraftProcess().craft(toCraft, quantity);
     }
 
 

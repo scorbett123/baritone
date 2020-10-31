@@ -21,20 +21,21 @@ import baritone.Baritone;
 import baritone.api.process.ICraftProcess;
 import baritone.api.process.PathingCommand;
 import baritone.api.process.PathingCommandType;
-import baritone.api.utils.Recipe;
 import baritone.utils.BaritoneProcessHelper;
-import net.minecraft.init.Items;
-import net.minecraft.item.ItemStack;
+import com.google.common.collect.Lists;
+import net.minecraft.client.gui.recipebook.GuiRecipeBook;
+import net.minecraft.client.gui.recipebook.RecipeList;
+import net.minecraft.client.util.RecipeBookClient;
+import net.minecraft.client.util.RecipeItemHelper;
+import net.minecraft.item.Item;
+import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.util.NonNullList;
+import net.minecraft.stats.RecipeBook;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Stream;
 
 public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess {
     private final LinkedList<int[]> clicks = new LinkedList<>();
@@ -42,9 +43,10 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     List<IRecipe> possibleRecipes = new ArrayList<>();
     int ticks = -1;
     BlockPos craftingTablePosition;
-    Recipe recipeToCraft = new Recipe();
+    IRecipe recipeToCraft = null;
     boolean exit = false;
     int amount;
+    RecipeList recipes = new RecipeList();
 
     public CraftProcess(Baritone baritone) {
         super(baritone);
@@ -58,7 +60,8 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         ticks++;
-        mc.playerController.func_194338_a(mc.player.inventoryContainer.windowId, recipeToCraft.getRecipe(), false, mc.player);
+        HELPER.logDirect(recipeToCraft.getRecipeOutput().getDisplayName());
+        mc.playerController.func_194338_a(mc.player.inventoryContainer.windowId, recipeToCraft, false, mc.player);
         baritone.getInventoryBehavior().takeResultItem(mc.player.inventoryContainer);
         active = false;
         exit = false;
@@ -79,80 +82,45 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     }
 
     @Override
-    public void craft(List<IRecipe> recipes, int amount) {
-        craftingTablePosition = null;
+    public void craft(Item item, int amount) {
+        RecipeItemHelper itemHelper = new RecipeItemHelper();
+        mc.player.inventory.fillStackedContents(itemHelper, false);
+        List<RecipeList> list = RecipeBookClient.ALL_RECIPES;
+        list.forEach((p_193944_1_) ->
+        {
+            p_193944_1_.canCraft(itemHelper, 2, 2, mc.player.getRecipeBook());
+        });
+        List<RecipeList> list1 = Lists.newArrayList(list);
+        list1.removeIf((p_193952_0_) ->
+        {
+            return !p_193952_0_.isNotEmpty();
+        });
+        list1.removeIf((p_193953_0_) ->
+                !p_193953_0_.containsValidRecipes());
+        list1.removeIf((p_193958_0_) ->
+        {
+            return !p_193958_0_.containsCraftableRecipes();
+        });
+        list1.removeIf(
+                (recipeList -> {
+                    if (recipeList.hasSingleResultItem()) {
+                        return !(recipeList.getRecipes(true).get(0).getRecipeOutput().getItem() == item);
+
+                    } else {
+                        for (IRecipe recipe : recipeList.getRecipes()) {
+                            if (recipe.getRecipeOutput().getItem() == item) {
+                                recipeToCraft = recipe;
+                                return true;
+                            }
+                        }
+                    }
+                    return true;
+                }));
+
         active = true;
-        this.amount = amount;
-        clicks.clear();
-        IRecipe recipeToCraft = recipes.stream()
-                .filter((recipe) -> {
-                            Stream<Ingredient> ingredients = recipe.getIngredients().stream()
-                                    .filter(ingredient -> Arrays.stream(ingredient.getMatchingStacks())
-                                            .anyMatch(itemStack -> baritone.getInventoryBehavior().doesInventoryContain(itemStack.getItem()))
-                                    );
 
-                            return ingredients.count() == recipe.getIngredients().stream().filter(ingredient -> ingredient.getMatchingStacks().length != 0).count();
-                        }
-                ).findFirst().orElse(null);
-
-        if (recipeToCraft == null) {
-            HELPER.logDirect("You don't have the required items");
-            return;
+        if (list1.size() > 0) {
+            recipeToCraft = list1.get(0).getRecipes(true).get(0);
         }
-        this.recipeToCraft.getFromIRecipe(recipeToCraft);
-        generateClicks(this.recipeToCraft, amount);
-        ticks = -1;
-
-    }
-
-    public void generateClicks(Recipe recipe, int amount) {
-        NonNullList<ItemStack> inventory = mc.player.inventory.mainInventory;
-        for (int k = 0; k < amount; k++) {
-            if (recipe.canBeCraftedInInventory()) {
-                for (int i = 0; i < 2; i++) {
-                    for (int j = 0; j < 2; j++) {
-                        if (recipe.getGrid()[i][j] != null) {
-                            int inInventory = baritone.getInventoryBehavior().searchInventory(recipe.getGrid()[i][j], inventory);
-                            if (inInventory == -1) {
-                                HELPER.logDirect("Don't have enough materials");
-                                onLostControl();
-                                return;
-                            }
-                            inventory = changeAmountAtSlot(inInventory, -1, inventory);
-                            clicks.add(new int[]{convertToPlayerInventory(inInventory) + 9, i + j * 2 + 1});
-                        }
-                    }
-                }
-            } else {
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        if (recipe.getGrid()[i][j] != null) {
-                            int inInventory = baritone.getInventoryBehavior().searchInventory(recipe.getGrid()[i][j], inventory);
-                            if (inInventory == -1) {
-                                HELPER.logDirect("Don't have enough materials");
-                                onLostControl();
-                                return;
-                            }
-                            inventory = changeAmountAtSlot(inInventory, -1, inventory);
-                            clicks.add(new int[]{convertToPlayerInventory(inInventory) + 10, i + j * 3 + 1});
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public int convertToPlayerInventory(int inventorySlot) {
-        return inventorySlot < 9 ? inventorySlot + 9 * 3 : inventorySlot - 9;
-    }
-
-    public NonNullList<ItemStack> changeAmountAtSlot(int locationInInv, int diff, NonNullList<ItemStack> inventory) {
-        ItemStack stack = inventory.get(locationInInv);
-        stack.setCount(stack.getCount() + diff);
-        if (stack.getCount() == 0) {
-            stack = Items.AIR.getDefaultInstance();
-        }
-        inventory.set(locationInInv, stack);
-        return inventory;
     }
 }
