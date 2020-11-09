@@ -23,14 +23,12 @@ import baritone.api.process.PathingCommand;
 import baritone.api.process.PathingCommandType;
 import baritone.utils.BaritoneProcessHelper;
 import com.google.common.collect.Lists;
-import net.minecraft.client.gui.recipebook.GuiRecipeBook;
+import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.client.gui.recipebook.RecipeList;
 import net.minecraft.client.util.RecipeBookClient;
 import net.minecraft.client.util.RecipeItemHelper;
 import net.minecraft.item.Item;
-import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.stats.RecipeBook;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
@@ -57,12 +55,25 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
         return active;
     }
 
+    int ticksToRest = 0;
+    GuiInventory gui;
+
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         ticks++;
+        if (ticksToRest > 0) {
+            ticksToRest--;
+            return new PathingCommand(null, PathingCommandType.DEFER);
+        }
+        if (!(mc.currentScreen instanceof GuiInventory)) {
+            gui = new GuiInventory(mc.player);
+            mc.displayGuiScreen(gui);
+            ticksToRest = 30;
+            return new PathingCommand(null, PathingCommandType.DEFER);
+        }
         HELPER.logDirect(recipeToCraft.getRecipeOutput().getDisplayName());
-        mc.playerController.func_194338_a(mc.player.inventoryContainer.windowId, recipeToCraft, false, mc.player);
-        baritone.getInventoryBehavior().takeResultItem(mc.player.inventoryContainer);
+        mc.playerController.func_194338_a(gui.inventorySlots.windowId, recipeToCraft, false, mc.player);
+        // baritone.getInventoryBehavior().takeResultItem(mc.player.inventoryContainer);
         active = false;
         exit = false;
         return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
