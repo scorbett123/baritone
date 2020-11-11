@@ -61,20 +61,16 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         ticks++;
-        if (ticksToRest > 0) {
-            ticksToRest--;
-            return new PathingCommand(null, PathingCommandType.DEFER);
+        if (recipeToCraft.canFit(2, 2)) {
+            //inventory crafting
+            if (ticks < amount) {
+                mc.playerController.func_194338_a(mc.player.inventoryContainer.windowId, recipeToCraft, false, mc.player);
+            } else {
+                baritone.getInventoryBehavior().takeResultItem(mc.player.inventoryContainer);
+                active = false;
+                onLostControl();
+            }
         }
-        if (!(mc.currentScreen instanceof GuiInventory)) {
-            gui = new GuiInventory(mc.player);
-            mc.displayGuiScreen(gui);
-            ticksToRest = 30;
-            return new PathingCommand(null, PathingCommandType.DEFER);
-        }
-        HELPER.logDirect(recipeToCraft.getRecipeOutput().getDisplayName());
-        mc.playerController.func_194338_a(gui.inventorySlots.windowId, recipeToCraft, false, mc.player);
-        // baritone.getInventoryBehavior().takeResultItem(mc.player.inventoryContainer);
-        active = false;
         exit = false;
         return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
 
@@ -84,6 +80,7 @@ public class CraftProcess extends BaritoneProcessHelper implements ICraftProcess
     public void onLostControl() {
         active = false;
         exit = false;
+        ticks = -1;
         clicks.clear();
     }
 
